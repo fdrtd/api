@@ -3,7 +3,7 @@ openapi: 3.0.0
 info:
 
   title: fdrtd API
-  version: 0.1.5
+  version: 0.1.7
   description: https://github.com/fdrtd
   termsOfService: https://fdrtd.github.io/docs/appendix/list_of_public_test_servers
 
@@ -29,6 +29,8 @@ tags:
     description: these endpoints store and retrieve network topologies
   - name: data
     description: these endpoints push or pull data to the server
+  - name: scripts
+    description: these endpoints allow remote execution of scripts
   - name: tasks
     description: these endpoints perform distributed computations
   - name: sync
@@ -45,8 +47,14 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok_Generic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - capabilities
 
@@ -61,8 +69,14 @@ paths:
       responses:
         '201':
           $ref: '#/components/responses/Created_Uuid'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - networks
 
@@ -79,10 +93,14 @@ paths:
       responses:
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - networks
 
@@ -95,10 +113,14 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok_Generic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - networks
 
@@ -111,10 +133,14 @@ paths:
       responses:
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - networks
 
@@ -138,39 +164,14 @@ paths:
       responses:
         '201':
           $ref: '#/components/responses/Created_Uuid'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-        '502':
-          $ref: '#/components/responses/BadGateway'
-        '504':
-          $ref: '#/components/responses/GatewayTimeout'
-      tags:
-        - data
-
-  /data/{data_id}/{family}/{microservice}:
-
-    post:
-      summary: transform data
-      description: input data (identified by data_id) to a
-                   microservice (leaving the original copy intact),
-                   store the result, and return the handle of
-                   the new resource
-      operationId: transform_data
-      parameters:
-        - $ref: '#/components/parameters/Family'
-        - $ref: '#/components/parameters/Microservice'
-        - $ref: '#/components/parameters/DataId'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '201':
-          $ref: '#/components/responses/Created_Uuid'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - data
 
@@ -202,12 +203,85 @@ paths:
       responses:
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - data
+
+  /scripts/{family}/{microservice}:
+
+    post:
+      summary: upload a script
+      description: upload a script for remote execution
+      operationId: create_script
+      parameters:
+        - $ref: '#/components/parameters/Family'
+        - $ref: '#/components/parameters/Microservice'
+      requestBody:
+        $ref: '#/components/requestBodies/Generic'
+      responses:
+        '201':
+          $ref: '#/components/responses/Created_Uuid'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+      tags:
+        - scripts
+
+  /scripts/{script_id}:
+
+    patch:
+      summary: execute script
+      description: execute a script
+      operationId: execute_script
+      parameters:
+        - $ref: '#/components/parameters/ScriptId'
+      requestBody:
+        $ref: '#/components/requestBodies/Generic'
+      responses:
+        '201':
+          $ref: '#/components/responses/Created_Uuid'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+      tags:
+        - scripts
+
+    delete:
+      summary: delete script
+      description: delete a script
+      operationId: delete_script
+      parameters:
+        - $ref: '#/components/parameters/ScriptId'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+      tags:
+        - scripts
 
   /tasks/{family}/{microservice}/{network_id}:
 
@@ -227,8 +301,14 @@ paths:
       responses:
         '201':
           $ref: '#/components/responses/Created_Uuid'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -248,8 +328,14 @@ paths:
       responses:
         '201':
           $ref: '#/components/responses/Created_Uuid'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -267,8 +353,14 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok_Generic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -282,10 +374,14 @@ paths:
       responses:
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -304,10 +400,14 @@ paths:
       responses:
         '202':
           $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -322,10 +422,14 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok_Generic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -345,10 +449,14 @@ paths:
       responses:
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -361,10 +469,14 @@ paths:
       responses:
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -375,10 +487,14 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok_Generic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -389,10 +505,14 @@ paths:
       responses:
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -413,10 +533,18 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok_Generic'
+        '202':
+          $ref: '#/components/responses/Accepted'
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -429,10 +557,18 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok_Generic'
+        '202':
+          $ref: '#/components/responses/Accepted'
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -445,10 +581,18 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok_Generic'
+        '202':
+          $ref: '#/components/responses/Accepted'
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -459,8 +603,18 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok_Generic'
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -469,10 +623,18 @@ paths:
       parameters:
         - $ref: '#/components/parameters/TaskId'
       responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - tasks
 
@@ -488,8 +650,14 @@ paths:
       responses:
         '201':
           $ref: '#/components/responses/Created_Uuid'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - sync
 
@@ -506,10 +674,14 @@ paths:
           $ref: '#/components/responses/Ok_Generic'
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - sync
 
@@ -524,10 +696,14 @@ paths:
           $ref: '#/components/responses/Ok_Generic'
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - sync
 
@@ -538,10 +714,16 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Ok_Generic'
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - sync
 
@@ -552,10 +734,14 @@ paths:
       responses:
         '204':
           $ref: '#/components/responses/NoContent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
       tags:
         - sync
 
@@ -617,6 +803,13 @@ components:
 
     TaskId:
       name: task_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+
+    ScriptId:
+      name: script_id
       in: path
       required: true
       schema:

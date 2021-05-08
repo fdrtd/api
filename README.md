@@ -28,3 +28,7 @@
 ![license](https://img.shields.io/github/license/fdrtd/api)
 
 ![swagger-validator](https://img.shields.io/swagger/valid/3.0?specUrl=https%3A%2F%2Fraw.githubusercontent.com%2Ffdrtd%2Fapi%2Fmain%2Fopenapi.yaml)
+
+**usage**
+
+browse to [fdrtd.github.io/api](https://fdrtd.github.io/api)
