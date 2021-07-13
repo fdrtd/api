@@ -3,14 +3,13 @@ openapi: 3.0.0
 info:
 
   title: fdrtd API
-  version: 0.1.7
+  version: 0.2.0
   description: https://github.com/fdrtd
-  termsOfService: https://fdrtd.github.io/docs/appendix/list_of_public_test_servers
 
   contact:
     name: fdrtd support
     email: support@fdrtd.com
-    url: https://fdrtd.com
+    url: https://www.fdrtd.com
 
   license:
     # identifier: MIT
@@ -20,745 +19,85 @@ info:
 
 externalDocs:
   description: technical documentation
-  url: https://fdrtd.github.io/docs
-
-tags:
-  - name: capabilities
-    description: this endpoint lists the installed microservices
-  - name: networks
-    description: these endpoints store and retrieve network topologies
-  - name: data
-    description: these endpoints push or pull data to the server
-  - name: scripts
-    description: these endpoints allow remote execution of scripts
-  - name: tasks
-    description: these endpoints perform distributed computations
-  - name: sync
-    description: these endpoints orchestrate remote control flow
+  url: https://www.fdrtd.com/docs
 
 paths:
 
-  /capabilities:
+  /:
 
     get:
-      summary: read capabilities
-      description: list the installed microservices
-      operationId: get_capabilities
+      summary: list microservices
+      description: list all installed microservices and their properties.
+      operationId: list_microservices
       responses:
         '200':
-          $ref: '#/components/responses/Ok_Generic'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+          $ref: '#/components/responses/ResponseMicroservices'
         '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - capabilities
-
-  /networks:
-
-    post:
-      summary: create a network topology
-      description: upload network topology, store copy on server, return resource handle (for use as network_id)
-      operationId: create_network
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '201':
-          $ref: '#/components/responses/Created_Uuid'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - networks
-
-  /networks/{network_id}:
+          $ref: '#/components/responses/ErrorInternalServerError'
 
     put:
-      summary: update a network topology
-      description: upload network topology to the server, overwrite existing resource (identified by network_id)
-      operationId: set_network
-      parameters:
-        - $ref: '#/components/parameters/NetworkId'
+      summary: select microservice
+      description: given some partial identifiers, find a matching microservice, and return a handle.
+                   for a wildcard search, the request body may hold an incomplete dictionary of identifiers.
+                   if there is a match, the response will be a server-side handle to the microservice.
+                   note that these handles are static, are safe to store client-side, and should be reused.
+      operationId: select_microservice
       requestBody:
-        $ref: '#/components/requestBodies/Generic'
+        $ref: '#/components/requestBodies/SelectMicroservice'
       responses:
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '202':
+          $ref: '#/components/responses/ResponseHandle'
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/responses/ErrorInternalServerError'
         '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - networks
-
-    get:
-      summary: read a network topology
-      description: read existing resource (identified by network_id) stored on the server, return a copy
-      operationId: get_network
-      parameters:
-        - $ref: '#/components/parameters/NetworkId'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok_Generic'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - networks
-
-    delete:
-      summary: delete a network topology
-      description: delete existing resource (identified by network_id) from server
-      operationId: delete_network
-      parameters:
-        - $ref: '#/components/parameters/NetworkId'
-      responses:
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - networks
-
-  /data/{family}/{microservice}:
+          $ref: '#/components/responses/ErrorNotImplemented'
 
     post:
-      summary: create data
-      description: upload the request body as data
-                   (/data/upload/<format>)
-                   or pull data from a microservice
-                   (/data/<family>/<microservice>),
-                   store a copy on the server,
-                   and return a resource handle
-                   (for use as data_id)
-      operationId: create_data
-      parameters:
-        - $ref: '#/components/parameters/Family'
-        - $ref: '#/components/parameters/Microservice'
+      summary: call microservice
+      description: invoke some member function of a microservice and supply arguments for its execution.
+                   a successful function call will return either
+                   * nothing (HTTP 204)
+                   * some final result (HTTP 200)
+                   * an endpoint of another microservice (HTTP 202)
+                   * an endpoint of another microservice, and a callback handle to additional
+                     server-side arguments, to be passed on to that microservice (HTTP 201).
+      operationId: call_microservice
       requestBody:
-        $ref: '#/components/requestBodies/Generic'
+        $ref: '#/components/requestBodies/CallMicroservice'
       responses:
+        '200':
+          $ref: '#/components/responses/ResponseDictionary'
         '201':
-          $ref: '#/components/responses/Created_Uuid'
+          $ref: '#/components/responses/ResponseCallback'
+        '202':
+          $ref: '#/components/responses/ResponseHandle'
+        '204':
+          $ref: '#/components/responses/ResponseNoContent'
         '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - data
-
-  /data/{data_id}:
-
-    get:
-      summary: download data (disabled)
-      description: this endpoint is permanently disabled and MUST
-                   return an error. data cannot be downloaded,
-                   this is part of the unidirectional flow of
-                   data (security by design).
-      operationId: get_data
-      parameters:
-        - $ref: '#/components/parameters/DataId'
-      responses:
+          $ref: '#/components/responses/ErrorBadRequest'
+        '401':
+          $ref: '#/components/responses/ErrorUnauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
-          # implementations MUST disallow downloading of data
-          # implementations MUST NOT return any other response
-      tags:
-        - data
-
-    delete:
-      summary: delete data
-      description: this endpoint deletes data from the server, identified by a data_id handle
-      operationId: delete_data
-      parameters:
-        - $ref: '#/components/parameters/DataId'
-      responses:
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+          $ref: '#/components/responses/ErrorForbidden'
         '404':
-          $ref: '#/components/responses/NotFound'
+          $ref: '#/components/responses/ErrorNotFound'
+        '405':
+          $ref: '#/components/responses/ErrorMethodNotAllowed'
         '500':
-          $ref: '#/components/responses/InternalServerError'
+          $ref: '#/components/responses/ErrorInternalServerError'
         '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - data
+          $ref: '#/components/responses/ErrorNotImplemented'
+        '502':
+          $ref: '#/components/responses/ErrorBadGateway'
+        '503':
+          $ref: '#/components/responses/ErrorServiceUnavailable'
+        '504':
+          $ref: '#/components/responses/ErrorGatewayTimeout'
 
-  /scripts/{family}/{microservice}:
-
-    post:
-      summary: upload a script
-      description: upload a script for remote execution
-      operationId: create_script
-      parameters:
-        - $ref: '#/components/parameters/Family'
-        - $ref: '#/components/parameters/Microservice'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '201':
-          $ref: '#/components/responses/Created_Uuid'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - scripts
-
-  /scripts/{script_id}:
-
-    patch:
-      summary: execute script
-      description: execute a script
-      operationId: execute_script
-      parameters:
-        - $ref: '#/components/parameters/ScriptId'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '201':
-          $ref: '#/components/responses/Created_Uuid'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - scripts
-
-    delete:
-      summary: delete script
-      description: delete a script
-      operationId: delete_script
-      parameters:
-        - $ref: '#/components/parameters/ScriptId'
-      responses:
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - scripts
-
-  /tasks/{family}/{microservice}/{network_id}:
-
-    post:
-      summary: create a task
-      description: a task is a stateful object processed by a certain protocol and microservice.
-                   for example, a protocol might be some form of secure multiparty computation,
-                   and the microservice might provide private set intersection. this endpoint
-                   creates a fresh task state on the server and returns a task_id handle.
-      operationId: create_task
-      parameters:
-        - $ref: '#/components/parameters/Family'
-        - $ref: '#/components/parameters/Microservice'
-        - $ref: '#/components/parameters/NetworkId'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '201':
-          $ref: '#/components/responses/Created_Uuid'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-    patch:
-      summary: accept an invitation to a task
-      description: this endpoint accepts an invitation object from another server,
-                   creates a matching task state on the server, and returns a task_id handle.
-                   upon accepting an invitation and linking data to the task, all involved
-                   servers may perform distributed computing on the linked data.
-      operationId: accept_invitation
-      parameters:
-        - $ref: '#/components/parameters/Family'
-        - $ref: '#/components/parameters/Microservice'
-        - $ref: '#/components/parameters/NetworkId'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '201':
-          $ref: '#/components/responses/Created_Uuid'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-  /tasks/{task_id}:
-
-    get:
-      summary: create an invitation to join a task
-      description: this endpoint creates an invitation object from an existing task.
-                   invitations may be securely sent to other parties and allow them
-                   to join a distributed computing effort. consider using the sync
-                   endpoints to broadcast invitations to collaborators in the network.
-      operationId: create_invitation
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok_Generic'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-    delete:
-      summary: delete a task
-      description: delete a stateful task object server-side, identified by a task_id handle.
-                   not that this does NOT delete linked data still residing on the server.
-      operationId: delete_task
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-      responses:
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-  /tasks/{task_id}/input/{data_id}:
-
-    put:
-      summary: input data to a task
-      description: links data to a task, making the contained data
-                   available to distributed computing.
-      operationId: input_data_to_task
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-        - $ref: '#/components/parameters/DataId'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '202':
-          $ref: '#/components/responses/Accepted'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-  /tasks/{task_id}/result:
-
-    get:
-      summary: return result of a task
-      description: returns the result of a task, or returns empty of the task has not completed yet
-      operationId: get_task_result
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok_Generic'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-  /tasks/{task_id}/keylut:
-
-    summary: (for internal use only)
-    description: these endpoints let microservices on different nodes
-                 exchange look-up-tables for hashing keys. you will
-                 probably not be using these endpoints directly.
-
-    put:
-      operationId: put_keylut
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-    patch:
-      operationId: patch_keylut
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-    get:
-      operationId: get_keylut
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok_Generic'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-    delete:
-      operationId: delete_keylut
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-      responses:
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-  /tasks/{task_id}/peertopeer:
-
-    summary: (for internal use only)
-    description: these endpoints let microservices on different nodes
-                 communicate peer-to-peer. this communication is
-                 protocol dependent. you should not call these
-                 endpoints directly.
-
-    post:
-      operationId: post_peertopeer
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok_Generic'
-        '202':
-          $ref: '#/components/responses/Accepted'
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-    put:
-      operationId: put_peertopeer
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok_Generic'
-        '202':
-          $ref: '#/components/responses/Accepted'
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-    patch:
-      operationId: patch_peertopeer
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok_Generic'
-        '202':
-          $ref: '#/components/responses/Accepted'
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-    get:
-      operationId: get_peertopeer
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok_Generic'
-        '202':
-          $ref: '#/components/responses/Accepted'
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-    delete:
-      operationId: delete_peertopeer
-      parameters:
-        - $ref: '#/components/parameters/TaskId'
-      responses:
-        '202':
-          $ref: '#/components/responses/Accepted'
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - tasks
-
-  /sync/{family}/{microservice}:
-
-    post:
-      operationId: post_sync
-      parameters:
-        - $ref: '#/components/parameters/Family'
-        - $ref: '#/components/parameters/Microservice'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '201':
-          $ref: '#/components/responses/Created_Uuid'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - sync
-
-  /sync/{sync_id}:
-
-    put:
-      operationId: put_sync
-      parameters:
-        - $ref: '#/components/parameters/SyncId'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok_Generic'
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - sync
-
-    patch:
-      operationId: patch_sync
-      parameters:
-        - $ref: '#/components/parameters/SyncId'
-      requestBody:
-        $ref: '#/components/requestBodies/Generic'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok_Generic'
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - sync
-
-    get:
-      operationId: get_sync
-      parameters:
-        - $ref: '#/components/parameters/SyncId'
-      responses:
-        '200':
-          $ref: '#/components/responses/Ok_Generic'
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - sync
-
-    delete:
-      operationId: delete_sync
-      parameters:
-        - $ref: '#/components/parameters/SyncId'
-      responses:
-        '204':
-          $ref: '#/components/responses/NoContent'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-        '501':
-          $ref: '#/components/responses/NotImplemented'
-      tags:
-        - sync
 
 components:
 
   schemas:
-
-    Generic:
-      type: object
-      additionalProperties: true
-
-    Uuid:
-      type: string
-      format: uuid
-
-    String:
-      type: string
 
     Error:
       type: object
@@ -767,161 +106,184 @@ components:
           type: integer
         message:
           type: string
+        stacktrace:
+          type: string
       required:
         - code
         - message
 
-  parameters:
-
-    Family:
-      name: family
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/String'
-
-    Microservice:
-      name: microservice
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/String'
-
-    NetworkId:
-      name: network_id
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/Uuid'
-
-    DataId:
-      name: data_id
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/Uuid'
-
-    TaskId:
-      name: task_id
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/Uuid'
-
-    ScriptId:
-      name: script_id
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/Uuid'
-
-    SyncId:
-      name: sync_id
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/Uuid'
 
   requestBodies:
 
-    Generic:
+    SelectMicroservice:
+      description: properties of the desired microservice, as a dictionary of key-value pairs.
+                   typical keys might include 'namespace' (of the vendor), 'microservice' (obviously),
+                   'version' (at the moment, the search returns only identical matches),
+                   and any combination of other properties as specified by the microservice provider.
       required: true
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Generic'
-          examples:
-            generic:
-              summary: this endpoint accepts a generic JSON object
-              value: { "key1": "value1", "key2": "value2" }
+            type: object
+            additionalProperties: true
+
+    CallMicroservice:
+      description: <handle> is a server-side handle to the microservice (found by select_microservice).
+                   <function> is the name of the member function of the microservice to be called.
+                   <parameters> is a dictionary of key-value pairs which are provided to the function as named arguments.
+                   <callback> is an optional handle to additional arguments stored server-side.
+                   if it is present, the server will look up these arguments and provide them to the
+                   function as additional named arguments.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - handle
+              - function
+              - parameters
+            properties:
+              handle:
+                type: string
+                format: uuid
+              function:
+                type: string
+              parameters:
+                type: object
+                additionalProperties: true
+              callback:
+                oneOf:
+                  - type: string
+                    format: uuid
+                  - type: object
+                    additionalProperties: true
+
 
   responses:
 
-    Ok_Generic: # 200
-      description: OK
+    ResponseMicroservices: # 200
+      description: a list of microservices
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Generic'
+            type: array
+            items:
+              type: object
+              additionalProperties: true
+              required:
+                - identifiers
+              properties:
+                identifiers:
+                  type: object
+                  additionalProperties: true
 
-    Created_Uuid: # 201
-      description: Created
+    ResponseDictionary: # 200
+      description: general response, a dictionary of key-value pairs
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Uuid'
+            type: object
+            additionalProperties: true
 
-    Accepted: # 202
-      description: Accepted
+    ResponseCallback: # 201
+      description: a handle to a server-side microservice,
+                   and a handle to additional arguments stored server-side,
+                   to be looked up and passed in function calls to the microservice
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - handle
+              - callback
+            properties:
+              handle:
+                type: string
+                format: uuid
+              callback:
+                oneOf:
+                  - type: string
+                    format: uuid
+                  - type: object
+                    additionalProperties: true
 
-    NoContent: # 204
-      description: No content
+    ResponseHandle: # 202
+      description: a handle to a server-side microservice
+      content:
+        application/json:
+          schema:
+            type: string
+            format: uuid
 
-    BadRequest: # 400
-      description: Bad request
+    ResponseNoContent: # 204
+      description: No Content
+
+    ErrorBadRequest: # 400
+      description: Bad Request
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
 
-    Unauthorized: # 401
+    ErrorUnauthorized: # 401
       description: Unauthorized
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
 
-    Forbidden: # 403
+    ErrorForbidden: # 403
       description: Forbidden
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
 
-    NotFound: # 404
-      description: Not found
+    ErrorNotFound: # 404
+      description: Not Found
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
 
-    MethodNotAllowed: # 405
-      description: Method not allowed
+    ErrorMethodNotAllowed: # 405
+      description: Method Not Allowed
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
 
-    InternalServerError: # 500
-      description: Internal server error
+    ErrorInternalServerError: # 500
+      description: Internal Server Error
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
 
-    NotImplemented: # 501
-      description: Not implemented
+    ErrorNotImplemented: # 501
+      description: Not Implemented
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
 
-    BadGateway: # 502
-      description: Bad gateway
+    ErrorBadGateway: # 502
+      description: Bad Gateway
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
 
-    ServiceUnavailable: # 503
-      description: Service unavailable
+    ErrorServiceUnavailable: # 503
+      description: Service Unavailable
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
 
-    GatewayTimeout: # 504
-      description: Gateway timeout
+    ErrorGatewayTimeout: # 504
+      description: Gateway Timeout
       content:
         application/json:
           schema:
